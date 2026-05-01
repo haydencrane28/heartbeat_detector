@@ -1,9 +1,11 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub struct PeakDetector{
     prev: f64,
     curr: f64,
     initialized: bool,
+    last_peak: Option<Instant>,
+    min_interval: Duration,
 }
 
 impl PeakDetector {
@@ -12,6 +14,8 @@ impl PeakDetector {
             prev: 0.0,
             curr: 0.0,
             initialized: false,
+            last_peak: None,
+            min_interval: Duration::from_millis(300), // Minimum interval between peaks
         }
     }
 
@@ -22,20 +26,26 @@ impl PeakDetector {
             return None;
         }
 
-        // check for peak
-        if self.prev < self.curr && self.curr > next {
-            let peak_time = Instant::now();
+        let now = Instant::now();
 
-            // Shift values forward
+        let is_peak = self.prev < self.curr && self.curr > next;
+
+        let allowed = match self.last_peak {
+            None => true,
+            Some(last) => now.duration_since(last) >= self.min_interval,
+        };
+
+        if is_peak && allowed {
+            self.last_peak = Some(now);
             self.prev = self.curr;
             self.curr = next;
 
-            return Some(peak_time);
+            return Some(now);
         }
 
-        //Shfit values forward
         self.prev = self.curr;
         self.curr = next;
+
         None
     }
 }
